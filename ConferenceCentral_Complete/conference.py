@@ -601,6 +601,7 @@ class ConferenceApi(remote.Service):
         data['date']= datetime.strptime(data['date'], '%Y-%m-%d').date()
       
         data['key'] = c_key
+        data['organizerUserId'] = user_id
        
       
         Session(**data).put()
@@ -634,7 +635,7 @@ class ConferenceApi(remote.Service):
         p_key = ndb.Key(Conference, request.websafeConferenceKey)
         conf = p_key
         print "p_key = %s", p_key
-        #sessions = Session.query(ancestor=p_key).fetch()
+        #sessions = Session.query(ancestor=ndb.Key(urlsafe=request.websafeConferenceKey))
         sessions = Session.query(Session.websafeConferenceKey == request.websafeConferenceKey)
         print "sessions = ", sessions
 
@@ -667,24 +668,19 @@ class ConferenceApi(remote.Service):
         """Copy relevant fields from Session to SessionForm."""
         sf = SessionForm()
         for field in sf.all_fields():
+            # convert Date to date string; just copy others
             if hasattr(session, field.name):
-                # convert Date to date string; just copy others
+
                 if field.name == "date":
                     setattr(sf, field.name, str(getattr(session, field.name)))
+                elif field.name == "startTime":
+                    setattr(sf, field.name, str(getattr(session, field.name)))
+                else:
+                    setattr(sf, field.name, getattr(session, field.name))
             elif field.name == "websafeConferenceKey":
-                setattr(sf, field.name, session.websafeConferenceKey.urlsafe())
-            elif field.name == "sessionName":
-                setattr(sf, field.name, session.sessionName)
-            elif field.name == "highlights":
-                setattr(sf, field.name, session.highlights)
-            elif field.name == "speaker":
-                setattr(sf, field.name, session.speaker)
-            elif field.name == "duration":
-                setattr(sf, field.name, session.duration)
-            elif field.name == "typeOfSession":
-                setattr(sf, field.name, session.typeOfSession)
-            elif field.name == "startTime":
-                setattr(sf, field.name, str(getattr(session.startTime)))
+                setattr(sf, field.name, session.key.urlsafe())
+            
+
         #if displayName:
          #   setattr(sf, 'organizerDisplayName', displayName)
         sf.check_initialized()

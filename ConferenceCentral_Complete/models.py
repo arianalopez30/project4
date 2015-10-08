@@ -43,11 +43,11 @@ class ProfileForm(messages.Message):
 class Session(ndb.Model):
     """Session --Session object"""
     websafeConferenceKey = ndb.StringProperty()
-    sessionName = ndb.StringProperty()
+    sessionName = ndb.StringProperty(repeated=True)
     highlights = ndb.StringProperty()
     speaker = ndb.StringProperty()
     duration = ndb.StringProperty()
-    typeOfSession = ndb.StringProperty()
+    typeOfSession = ndb.StringProperty(repeated=True)
     date = ndb.DateProperty()
     startTime = ndb.TimeProperty()
 
@@ -60,7 +60,7 @@ class SessionForm(messages.Message):
     highlights = messages.StringField(3)
     speaker = messages.StringField(4)
     duration = messages.StringField(5)
-    typeOfSession = messages.StringField(6)
+    typeOfSession = messages.StringField(6, repeated=True)
     date = messages.StringField(7)
     startTime = messages.StringField(8)
     
