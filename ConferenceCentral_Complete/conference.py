@@ -601,7 +601,7 @@ class ConferenceApi(remote.Service):
         data['date']= datetime.strptime(data['date'], '%Y-%m-%d').date()
       
         data['key'] = c_key
-        data['organizerUserId'] = user_id
+       # data['organizerUserId'] = user_id
        
       
         Session(**data).put()
@@ -670,13 +670,14 @@ class ConferenceApi(remote.Service):
         for field in sf.all_fields():
             # convert Date to date string; just copy others
             if hasattr(session, field.name):
-
+                print field.name 
+                print getattr(session, field.name)
                 if field.name == "date":
                     setattr(sf, field.name, str(getattr(session, field.name)))
                 elif field.name == "startTime":
                     setattr(sf, field.name, str(getattr(session, field.name)))
                 else:
-                    setattr(sf, field.name, getattr(session, field.name))
+                    setattr(sf, field.name, str(getattr(session, field.name)))
             elif field.name == "websafeConferenceKey":
                 setattr(sf, field.name, session.key.urlsafe())
             
