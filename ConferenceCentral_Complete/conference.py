@@ -41,6 +41,7 @@ from models import ConferenceQueryForms
 from models import TeeShirtSize
 from models import Session
 from models import SessionForm
+from models import SessionForms
 from models import TypeOfSession
 
 from settings import WEB_CLIENT_ID
@@ -97,6 +98,12 @@ SESSION_POST_REQUEST = endpoints.ResourceContainer(
 SESSION_GET_REQUEST = endpoints.ResourceContainer(
     message_types.VoidMessage,
     websafeConferenceKey=messages.StringField(1),
+)
+
+SESSION_GET_REQUEST_BY_TYPE = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    websafeConferenceKey=messages.StringField(1),
+    typeOfSession = messages.StringField(2),
 )
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -616,7 +623,7 @@ class ConferenceApi(remote.Service):
 
 
 
-    @endpoints.method(SESSION_GET_REQUEST, SessionForm,
+    @endpoints.method(SESSION_GET_REQUEST, SessionForms,
             path='getConferenceSession/{websafeConferenceKey}',
             http_method='GET', name='getConferenceSession')
     def getConferenceSession(self, request):
@@ -627,42 +634,33 @@ class ConferenceApi(remote.Service):
             raise endpoints.UnauthorizedException('Authorization required')
         user_id = getUserId(user)
 
-        #confKey = ndb.Key(Conference, urlsafe=request.websafeConferenceKey).get()
-        #websafeKey = request.websafeConferenceKey
-        #print "websafe key %s", websafeKey
-        #confKey = ndb.Key(Conference, urlsafe=request.websafeConferenceKey).get()
-       # conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
-        p_key = ndb.Key(Conference, request.websafeConferenceKey)
-        conf = p_key
-        print "p_key = %s", p_key
-        #sessions = Session.query(ancestor=ndb.Key(urlsafe=request.websafeConferenceKey))
+        #conf = ndb.Key(urlsafe=request.websafeConferenceKey)
         sessions = Session.query(Session.websafeConferenceKey == request.websafeConferenceKey)
         print "sessions = ", sessions
 
-        return SessionForm(
+        return SessionForms(
            items=[self._copySessionToForm(session) for session in sessions]
         )
 
-   # @endpoints.method(message_types.VoidMessage, ConferenceForms,
-   #         path='getConferencesCreated',
-   #         http_method='POST', name='getConferencesCreated')
-   # def getConferencesCreated(self, request):
-   #     """Return conferences created by user."""
-   #     # make sure user is authed
-   #     user = endpoints.get_current_user()
-   #     if not user:
-   #         raise endpoints.UnauthorizedException('Authorization required')
-   #     user_id = getUserId(user)
-
-   #     # create ancestor query for all key matches for this user
-   #     confs = Conference.query(ancestor=ndb.Key(Profile, user_id))
-   #     prof = ndb.Key(Profile, user_id).get()
-   #     # return set of ConferenceForm objects per Conference
-   #     return ConferenceForms(
-   #         items=[self._copyConferenceToForm(conf, getattr(prof, 'displayName')) for conf in confs]
-   #     )
-
  
+    @endpoints.method(SESSION_GET_REQUEST_BY_TYPE, SessionForms,
+            path='getConferenceSessionByType/{websafeConferenceKey}/{typeOfSession}',
+            http_method='GET', name='getConferenceSessionByType')
+    def getConferenceSessionByType(self, request):
+        """Return requested conference (by websafeConferenceKey and typeOfSession)."""
+        #check if user is authorized
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        #conf = ndb.Key(urlsafe=request.websafeConferenceKey)
+
+        sessions = Session.query(Session.websafeConferenceKey == request.websafeConferenceKey, Session.typeOfSession == request.typeOfSession)
+
+        return SessionForms(
+           items=[self._copySessionToForm(session) for session in sessions]
+        ) 
 
     def _copySessionToForm(self, session):
         """Copy relevant fields from Session to SessionForm."""
