@@ -44,6 +44,10 @@ from models import SessionForm
 from models import SessionForms
 from models import TypeOfSession
 
+from models import Wishlist
+from models import WishlistForm
+
+
 from settings import WEB_CLIENT_ID
 from settings import ANDROID_CLIENT_ID
 from settings import IOS_CLIENT_ID
@@ -54,8 +58,10 @@ from utils import getUserId
 EMAIL_SCOPE = endpoints.EMAIL_SCOPE
 API_EXPLORER_CLIENT_ID = endpoints.API_EXPLORER_CLIENT_ID
 MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
+MEMCACHE_SPEAKER_KEY = "SPEAKER"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
+FEATURED_SPEAKER = "{}'s featured sessions: {}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 DEFAULTS = {
@@ -105,6 +111,17 @@ SESSION_GET_REQUEST_BY_TYPE = endpoints.ResourceContainer(
     websafeConferenceKey=messages.StringField(1),
     typeOfSession = messages.StringField(2),
 )
+
+SESSION_GET_REQUEST_BY_SPEAKER = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    speaker =messages.StringField(1),
+)
+
+
+WISHLIST_POST_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    sessionKey=messages.StringField(1),
+)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -115,7 +132,6 @@ class ConferenceApi(remote.Service):
     """Conference API v0.1"""
 
 # - - - Conference objects - - - - - - - - - - - - - - - - -
-
     def _copyConferenceToForm(self, conf, displayName):
         """Copy relevant fields from Conference to ConferenceForm."""
         cf = ConferenceForm()
@@ -132,7 +148,6 @@ class ConferenceApi(remote.Service):
             setattr(cf, 'organizerDisplayName', displayName)
         cf.check_initialized()
         return cf
-
 
     def _createConferenceObject(self, request):
         """Create or update Conference object, returning ConferenceForm/request."""
@@ -184,7 +199,6 @@ class ConferenceApi(remote.Service):
             url='/tasks/send_confirmation_email'
         )
         return request
-
 
     @ndb.transactional()
     def _updateConferenceObject(self, request):
@@ -240,7 +254,7 @@ class ConferenceApi(remote.Service):
         """Update conference w/provided fields & return w/updated info."""
         return self._updateConferenceObject(request)
 
-
+ 
     @endpoints.method(CONF_GET_REQUEST, ConferenceForm,
             path='conference/{websafeConferenceKey}',
             http_method='GET', name='getConference')
@@ -608,17 +622,54 @@ class ConferenceApi(remote.Service):
         data['date']= datetime.strptime(data['date'], '%Y-%m-%d').date()
       
         data['key'] = c_key
-       # data['organizerUserId'] = user_id
+        
+        speaker_name = data['speaker']  
        
-      
+        #Query sessions by speaker and get all of the ones that are currently in the datastore and add them 
+        #to the memcache
+        sessions_by_speaker = Session.query(Session.speaker == speaker_name).fetch()
+        
+        
+        speaker_sessions = []
+        
+        speaker_sessions = FEATURED_SPEAKER.format(speaker_name, ','.join([session.sessionName for session in sessions_by_speaker]))
+        
+        print speaker_sessions 
+
+        if len(sessions_by_speaker) > 1:
+            #add the speaker and the sessions they are in into the memcache
+            self._speaker_to_memcache(speaker_sessions)
+        else:
+            print "this speaker has 0 sessions"
+            
+        #add the new session data to datastore
         Session(**data).put()
  
         return request
 
+    def _speaker_to_memcache(self, speaker_sessions):
+        
+        #create the memcache
+        taskqueue.add(url='/task/set_speaker', params={'sessions': speaker_sessions}, method='GET')
+        
+
+    @staticmethod
+    def _cache_speaker(sessions):
+        """Adds featured speaker to memcache."""
+        speaker_sessions = sessions
+        #set the memcache for the most recent speaker and their sessions
+        memcache.set(MEMCACHE_SPEAKER_KEY, speaker_sessions)
+
+    @endpoints.method(message_types.VoidMessage, StringMessage, path='conference/featured_speaker/get', http_method='GET', name='getFeaturedSpeaker')
+    def getFeaturedSpeaker(self, request):
+        """Return Featured Speaker from memcache."""
+        return StringMessage(data=memcache.get(MEMCACHE_SPEAKER_KEY) or "")
+
+
 
     @endpoints.method(SessionForm, SessionForm, path='session', http_method='POST', name='createSession')
     def createSession(self, request):
-        """Create new conference."""
+        """Create new session."""
         return self._createSessionObject(request)
 
 
@@ -627,7 +678,7 @@ class ConferenceApi(remote.Service):
             path='getConferenceSession/{websafeConferenceKey}',
             http_method='GET', name='getConferenceSession')
     def getConferenceSession(self, request):
-        """Return requested conference (by websafeConferenceKey)."""
+        """Return requested session."""
         #check if user is authorized
         user = endpoints.get_current_user()
         if not user:
@@ -647,20 +698,37 @@ class ConferenceApi(remote.Service):
             path='getConferenceSessionByType/{websafeConferenceKey}/{typeOfSession}',
             http_method='GET', name='getConferenceSessionByType')
     def getConferenceSessionByType(self, request):
-        """Return requested conference (by websafeConferenceKey and typeOfSession)."""
+        """Return requested session by session type."""
         #check if user is authorized
         user = endpoints.get_current_user()
         if not user:
             raise endpoints.UnauthorizedException('Authorization required')
         user_id = getUserId(user)
 
-        #conf = ndb.Key(urlsafe=request.websafeConferenceKey)
-
         sessions = Session.query(Session.websafeConferenceKey == request.websafeConferenceKey, Session.typeOfSession == request.typeOfSession)
 
         return SessionForms(
            items=[self._copySessionToForm(session) for session in sessions]
         ) 
+
+
+    @endpoints.method(SESSION_GET_REQUEST_BY_SPEAKER, SessionForms,
+            path='getConferenceSessionBySpeaker/{speaker}',
+            http_method='GET', name='getConferenceSessionBySpeaker')
+    def getConferenceSessionBySpeaker(self, request):
+        """Return session by (speaker)."""
+        #check if user is authorized
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        sessions = Session.query(Session.speaker == request.speaker)
+
+        return SessionForms(
+           items=[self._copySessionToForm(session) for session in sessions]
+        ) 
+
 
     def _copySessionToForm(self, session):
         """Copy relevant fields from Session to SessionForm."""
@@ -679,12 +747,130 @@ class ConferenceApi(remote.Service):
             elif field.name == "websafeConferenceKey":
                 setattr(sf, field.name, session.key.urlsafe())
             
-
-        #if displayName:
-         #   setattr(sf, 'organizerDisplayName', displayName)
         sf.check_initialized()
         return sf
 
+    @endpoints.method(WISHLIST_POST_REQUEST, StringMessage, path='wishlist', http_method='POST', name='addSessionToWishlist')
+    def addSessionToWishlist(self, request):
 
+        """Create or update wishlist object, returning wishlist/request."""
+        # preload necessary data items
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+
+        #get the key of the session 
+        session = ndb.Key(urlsafe=request.sessionKey)
+
+        #get the profile of the current user
+        currentUser = self._getProfileFromUser()
+        
+        sessions_in_Wishlist = currentUser.sessionWishlist
+
+        if request.sessionKey in currentUser.sessionWishlist:
+            msg = StringMessage(data="Session is already in your wishlist. This has not been added to avoid duplications")
+        else:
+            currentUser.sessionWishlist.append(request.sessionKey)
+            msg = StringMessage(data="The session has been added to the wishlist")
+
+        currentUser.put()
+ 
+        return msg
+
+
+    @endpoints.method(message_types.VoidMessage, SessionForms, path='get/wishlist', http_method='GET', name='getSessionsInWishlist')
+    def getSessionsInWishlist(self, request):
+
+        """returning wishlist/request."""
+        # preload necessary data items
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+
+        #get the profile of the current user
+        currentUser = self._getProfileFromUser()
+        
+        #get the users sessions from their wishlist
+        sessions_in_Wishlist = currentUser.sessionWishlist
+
+
+        return SessionForms(
+           items=[self._copySessionToForm(ndb.Key(urlsafe=session).get()) for session in sessions_in_Wishlist]
+        ) 
+
+
+
+    def _copyWishlistSessionToForm(self, session):
+        """Copy relevant fields from Session to SessionForm."""
+        wishlist = WishlistForm()
+        for field in wishlist.all_fields():
+            # convert Date to date string; just copy others
+            if hasattr(session, field.name):
+                if field.name == "sessionkey":
+                    setattr(sf, field.name, str(getattr(session, field.name)))            
+        wishlist.check_initialized()
+        return wishlist
+
+    @endpoints.method(message_types.VoidMessage, SessionForms, path='getDurationQuery',http_method='GET', name='getDurationQuery')
+    def getDurationQuery(self, request):
+        """return sessions that are an hr long."""
+        #check if user is authorized
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        sessions = Session.query(Session.duration == "60")
+        print "sessions = ", sessions
+
+        return SessionForms(
+           items=[self._copySessionToForm(session) for session in sessions]
+        )
+
+
+    @endpoints.method(message_types.VoidMessage, SessionForms, path='getVampireSessionQuery',http_method='GET', name='getVampireSessionQuery')
+    def getVampireSessionQuery(self, request):
+        """Returns Sessions that include vampire."""
+        #check if user is authorized
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        #conf = ndb.Key(urlsafe=request.websafeConferenceKey)
+        sessions = Session.query(Session.sessionName == "Vampire")
+        print "sessions = ", sessions
+
+        return SessionForms(
+           items=[self._copySessionToForm(session) for session in sessions]
+        )
+
+
+    @endpoints.method(message_types.VoidMessage, SessionForms, path='getNoWorkshopAndBefore7Sessions',http_method='GET', name='getNoWorkshopAndBefore7Sessions')
+    def getNoWorkshopAndBefore7Sessions(self, request):
+        """Return sessions that are not workshops and that are before 7pm."""
+        #check if user is authorized
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        time = '19:00:00'
+        sevenPM = datetime.strptime(time, '%H:%M:%S').time()
+          #query based on Session type not equal to workshop
+        sessions = Session.query(Session.typeOfSession != "workshop")
+
+        #create a new array filtered_session
+        filtered_sessions = []
+
+        for session in sessions:
+            if session.startTime < sevenPM:
+                filtered_sessions.append(session)
+
+        print "sessions = ", sessions
+
+        return SessionForms(
+           items=[self._copySessionToForm(session) for session in filtered_sessions]
+        )
 
 api = endpoints.api_server([ConferenceApi]) # register API

@@ -30,3 +30,16 @@ App Engine application for the Udacity training course.
 [4]: https://console.developers.google.com/
 [5]: https://localhost:8080/
 [6]: https://developers.google.com/appengine/docs/python/endpoints/endpoints_tool
+
+Explain Design Choices
+1) I made session and speaker both Strings. The speaker is a string because I don't have a list of specific users 
+and the speakers could change at any moment. Session was made as a child of the Conference because it will never be orphaned. It will
+always need to be tied to a Conference. Furthermore, it will be easier to query, in terms of ancestor.
+
+2) Come up with 2 additional queries
+-One query looks for Sessions that are about vampires
+-The other query looks for sessions that are 60 mins.
+
+3) Issue with Before 7pm and no workshop query. The issue with this query is that you cannot perform more than one inequality query
+ ie <,>, &&. Also, you cannot query on different properties. To resolve this issue, I queried for all sessions that were not a workshop,
+ then I looped through the results and compared the time to ensure the time was before 7pm.
