@@ -61,7 +61,7 @@ MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
 MEMCACHE_SPEAKER_KEY = "SPEAKER"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
-FEATURED_SPEAKER = "{}'s featured sessions: {}"
+FEATURED_SPEAKER = "{} sessions: {}" #found on github. 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 DEFAULTS = {

@@ -31,6 +31,8 @@ App Engine application for the Udacity training course.
 [5]: https://localhost:8080/
 [6]: https://developers.google.com/appengine/docs/python/endpoints/endpoints_tool
 
+ProjectID is conferencecentral-1080 so link would be http://conferencecentral-1080.appspot.com
+
 Explain Design Choices
 1) I made session and speaker both Strings. The speaker is a string because I don't have a list of specific users 
 and the speakers could change at any moment. Session was made as a child of the Conference because it will never be orphaned. It will
