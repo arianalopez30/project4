@@ -40,6 +40,26 @@ always need to be tied to a Conference. Furthermore, it will be easier to query,
 Please look below for inline explanation of my models.
 
 
+class Profile(ndb.Model):
+    """Profile -- User profile object"""
+    #displayName = ndb.StringProperty()
+    #mainEmail = ndb.StringProperty()
+    #teeShirtSize = ndb.StringProperty(default='NOT_SPECIFIED')
+    #conferenceKeysToAttend = ndb.StringProperty(repeated=True)
+    sessionWishlist = ndb.StringProperty(repeated=True) --> Made a string because it will be url safe and is used for searching.
+    
+class Session(ndb.Model):
+    """Session --Session object"""
+    websafeConferenceKey = ndb.StringProperty() --> made a string because it will be used for searching
+    sessionName = ndb.StringProperty() --> made a string because it can be text or alphanumeric
+    highlights = ndb.StringProperty() --> made a string because it can be text or alphanumeric 
+    speaker = ndb.StringProperty() --> made a string because it can be text or alphanumeric
+    duration = ndb.StringProperty() --> made a string because it will be easier to query off of
+    typeOfSession = ndb.StringProperty() --> made a string because input would be text
+    date = ndb.DateProperty() --> made a date to for formatting purposes, yyyy-mm-dd
+    startTime = ndb.TimeProperty() --> made as time because it has to be inputted as 24 hr notation in a specific format
+
+
 2) Come up with 2 additional queries
 -One query looks for Sessions that are about vampires
 -The other query looks for sessions that are 60 mins.
