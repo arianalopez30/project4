@@ -49,15 +49,15 @@ class Profile(ndb.Model):
    * sessionWishlist = ndb.StringProperty(repeated=True) --> Made a string because it will be url safe and is used for searching.
     
 class Session(ndb.Model):
-    * """Session --Session object"""
-    * websafeConferenceKey = ndb.StringProperty() --> made a string because it will be used for searching
-    * sessionName = ndb.StringProperty() --> made a string because it can be text or alphanumeric
-    * highlights = ndb.StringProperty() --> made a string because it can be text or alphanumeric 
-    * speaker = ndb.StringProperty() --> made a string because it can be text or alphanumeric
-    * duration = ndb.StringProperty() --> made a string because it will be easier to query off of
-    * typeOfSession = ndb.StringProperty() --> made a string because input would be text
-    * date = ndb.DateProperty() --> made a date to for formatting purposes, yyyy-mm-dd
-    * startTime = ndb.TimeProperty() --> made as time because it has to be inputted as 24 hr notation in a specific format
+   * """Session --Session object"""
+   * websafeConferenceKey = ndb.StringProperty() --> made a string because it will be used for searching
+   * sessionName = ndb.StringProperty() --> made a string because it can be text or alphanumeric
+   * highlights = ndb.StringProperty() --> made a string because it can be text or alphanumeric 
+   * speaker = ndb.StringProperty() --> made a string because it can be text or alphanumeric
+   * duration = ndb.StringProperty() --> made a string because it will be easier to query off of
+   * typeOfSession = ndb.StringProperty() --> made a string because input would be text
+   * date = ndb.DateProperty() --> made a date to for formatting purposes, yyyy-mm-dd
+   * startTime = ndb.TimeProperty() --> made as time because it has to be inputted as 24 hr notation in a specific format
 
 
 2) Come up with 2 additional queries
