@@ -37,6 +37,8 @@ Explain Design Choices
 1) I made session and speaker both Strings. The speaker is a string because I don't have a list of specific users 
 and the speakers could change at any moment. Session was made as a child of the Conference because it will never be orphaned. It will
 always need to be tied to a Conference. Furthermore, it will be easier to query, in terms of ancestor.
+Please look below for inline explanation of my models.
+
 
 2) Come up with 2 additional queries
 -One query looks for Sessions that are about vampires
