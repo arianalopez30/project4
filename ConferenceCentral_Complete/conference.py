@@ -61,7 +61,7 @@ MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
 MEMCACHE_SPEAKER_KEY = "SPEAKER"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
-FEATURED_SPEAKER = "{} sessions: {}" #found on github. 
+FEATURED_SPEAKER = "{} sessions: {}" #found on github, pythonic1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 DEFAULTS = {
@@ -613,7 +613,7 @@ class ConferenceApi(remote.Service):
 
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
         wsck = data['websafeConferenceKey']
-        p_key = ndb.Key(Conference, request.websafeConferenceKey).get()
+        p_key = ndb.Key(Conference, request.websafeConferenceKey)
         c_id = Session.allocate_ids(size=1, parent=p_key)[0]
         c_key = ndb.Key(Session, c_id, parent=p_key)
         
@@ -627,8 +627,7 @@ class ConferenceApi(remote.Service):
        
         #Query sessions by speaker and get all of the ones that are currently in the datastore and add them 
         #to the memcache
-        sessions_by_speaker = Session.query(Session.speaker == speaker_name).fetch()
-        
+        sessions_by_speaker = Session.query(ndb.AND(Session.speaker == speaker_name, Session.websafeConferenceKey == wsck)).fetch()
         
         speaker_sessions = []
         
@@ -636,7 +635,7 @@ class ConferenceApi(remote.Service):
         
         print speaker_sessions 
 
-        if len(sessions_by_speaker) > 1:
+        if len(sessions_by_speaker) >= 1:
             #add the speaker and the sessions they are in into the memcache
             self._speaker_to_memcache(speaker_sessions)
         else:
@@ -745,6 +744,8 @@ class ConferenceApi(remote.Service):
                 else:
                     setattr(sf, field.name, str(getattr(session, field.name)))
             elif field.name == "websafeConferenceKey":
+                setattr(sf, field.name, str(getattr(session, field.name)))
+            elif field.name == "websafeSessionKey":
                 setattr(sf, field.name, session.key.urlsafe())
             
         sf.check_initialized()

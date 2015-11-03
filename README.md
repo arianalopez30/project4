@@ -54,7 +54,7 @@ class Session(ndb.Model):
    * sessionName = ndb.StringProperty() --> made a string because it can be text or alphanumeric
    * highlights = ndb.StringProperty() --> made a string because it can be text or alphanumeric 
    * speaker = ndb.StringProperty() --> made a string because it can be text or alphanumeric
-   * duration = ndb.StringProperty() --> made a string because it will be easier to query off of
+   * duration = ndb.StringProperty() --> made a string because it will be easier to query off of (initially I was using 1hr or 60m, which is why I didn't use integer)
    * typeOfSession = ndb.StringProperty() --> made a string because input would be text
    * date = ndb.DateProperty() --> made a date to for formatting purposes, yyyy-mm-dd
    * startTime = ndb.TimeProperty() --> made as time because it has to be inputted as 24 hr notation in a specific format
@@ -64,6 +64,6 @@ class Session(ndb.Model):
 -One query looks for Sessions that are about vampires
 -The other query looks for sessions that are 60 mins.
 
-3) Issue with Before 7pm and no workshop query. The issue with this query is that you cannot perform more than one inequality query
- ie <,>, &&. Also, you cannot query on different properties. To resolve this issue, I queried for all sessions that were not a workshop,
+3) Issue with Before 7pm and no workshop query. The issue with this query is that you cannot perform more than one inequality filter in a query
+ ie !=. You therefore have to break the query up. To resolve this issue, I queried for all sessions that were not a workshop,
  then I looped through the results and compared the time to ensure the time was before 7pm.
