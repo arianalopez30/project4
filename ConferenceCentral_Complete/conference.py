@@ -622,12 +622,13 @@ class ConferenceApi(remote.Service):
         data['date']= datetime.strptime(data['date'], '%Y-%m-%d').date()
       
         data['key'] = c_key
+        data['websafeConferenceKey'] = request.websafeConferenceKey
         
         speaker_name = data['speaker']  
        
         #Query sessions by speaker and get all of the ones that are currently in the datastore and add them 
         #to the memcache
-        sessions_by_speaker = Session.query(ndb.AND(Session.speaker == speaker_name, Session.websafeConferenceKey == wsck)).fetch()
+        sessions_by_speaker = Session.query(ndb.AND(Session.speaker == speaker_name, Session.websafeConferenceKey == request.websafeConferenceKey)).fetch()
         
         speaker_sessions = []
         
@@ -645,6 +646,7 @@ class ConferenceApi(remote.Service):
         Session(**data).put()
  
         return request
+        #return self._copySessionToForm(data)
 
     def _speaker_to_memcache(self, speaker_sessions):
         
@@ -743,8 +745,8 @@ class ConferenceApi(remote.Service):
                     setattr(sf, field.name, str(getattr(session, field.name)))
                 else:
                     setattr(sf, field.name, str(getattr(session, field.name)))
-            elif field.name == "websafeConferenceKey":
-                setattr(sf, field.name, str(getattr(session, field.name)))
+            #elif field.name == "websafeConferenceKey":
+            #    setattr(sf, field.name, str(getattr(session, field.name)))
             elif field.name == "websafeSessionKey":
                 setattr(sf, field.name, session.key.urlsafe())
             
